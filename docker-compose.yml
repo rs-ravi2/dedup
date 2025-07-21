@@ -2,12 +2,14 @@ version: '3.8'
 
 services:
   redis:
-    image: redis:7-alpine
+    image: redis/redis-stack:latest
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    environment:
+      - REDIS_ARGS="--maxmemory 2gb --maxmemory-policy allkeys-lru"
 
   api:
     build: .
