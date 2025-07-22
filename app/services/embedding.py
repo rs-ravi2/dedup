@@ -4,6 +4,11 @@ from PIL import Image
 import io
 from app.config import settings
 from app.utils.exceptions import VectorServiceError
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
@@ -15,11 +20,13 @@ class EmbeddingService:
     def generate_embedding(self, image_data: bytes) -> List[float]:
         """Generate embedding from image data"""
         try:
+            t1 = time.perf_counter()
             self._validate_image(image_data)
 
             # TODO: Replace with real model inference
             vector = np.random.random(self.dimension).astype(np.float32)
             vector = vector / np.linalg.norm(vector)
+            logger.info(f"Processing time for emebedding generation {time.perf_counter() - t1} seconds")
             return vector.tolist()
 
         except Exception as e:
@@ -38,6 +45,7 @@ class EmbeddingService:
 
             if image.size[0] < 50 or image.size[1] < 50:
                 raise VectorServiceError("Image too small")
+            
 
         except Exception as e:
             if isinstance(e, VectorServiceError):

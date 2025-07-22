@@ -3,22 +3,14 @@ import json
 import numpy as np
 from typing import List, Dict, Optional, Tuple
 from app.config import settings
-from app.models.requests import StoreMetadata, SearchMetadata
+# from app.models.requests import StoreMetadata, SearchMetadata
+from app.models.requests import CustomerMetadata
 from app.utils.exceptions import VectorServiceError, CustomerNotFoundError
 import logging
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-import redis
-import json
-import numpy as np
-from typing import List, Dict, Optional
-from app.config import settings
-from app.models.requests import CustomerMetadata
-from app.utils.exceptions import VectorServiceError, CustomerNotFoundError
-import asyncio
-
 
 class RedisVectorService:
     """Redis-based vector storage and similarity search service"""
@@ -33,22 +25,31 @@ class RedisVectorService:
         self.vector_key_prefix = "vector:"
         self.metadata_key_prefix = "metadata:"
 
-    def store_vector(self, customer_id: str, vector: List[float], metadata: CustomerMetadata) -> bool:
+    def store_vector(self, transaction_id: str, vector: List[float], metadata: CustomerMetadata) -> bool:
         """Store vector and metadata in Redis"""
         try:
             # Store vector
-            vector_key = f"{self.vector_key_prefix}{customer_id}"
+            t1 = time.perf_counter()
+            vector_key = f"{self.vector_key_prefix}{transaction_id}"
             vector_data = json.dumps(vector)
 
             # Store metadata
-            metadata_key = f"{self.metadata_key_prefix}{customer_id}"
-            metadata_data = metadata.model_dump_json()
+            metadata_key = f"{self.metadata_key_prefix}{transaction_id}"
+            # Check Pydantic version and use appropriate method
+            if hasattr(metadata, 'model_dump'):
+                # Pydantic v2
+                metadata_data = json.dumps(metadata.model_dump())
+            else:
+                # Pydantic v1
+                metadata_data = json.dumps(metadata.dict())
 
             # Use pipeline for atomic operations
+            
             pipe = self.redis_client.pipeline()
             pipe.set(vector_key, vector_data)
             pipe.set(metadata_key, metadata_data)
             pipe.execute()
+            logger.info(f"Processing time for storing vector: {time.perf_counter() - t1} seconds")
 
             return True
 
@@ -59,10 +60,12 @@ class RedisVectorService:
         """Search for similar vectors using brute force similarity"""
         try:
             results = []
+            t1 = time.perf_counter()
             vector_keys = self.redis_client.keys(f"{self.vector_key_prefix}*")
 
+            
             for vector_key in vector_keys:
-                customer_id = vector_key.replace(self.vector_key_prefix, "")
+                transaction_id = vector_key.replace(self.vector_key_prefix, "")
                 stored_vector_data = self.redis_client.get(vector_key)
 
                 if not stored_vector_data:
@@ -72,16 +75,17 @@ class RedisVectorService:
                 similarity = self._calculate_cosine_similarity(query_vector, stored_vector)
 
                 if similarity >= threshold:
-                    metadata_key = f"{self.metadata_key_prefix}{customer_id}"
+                    metadata_key = f"{self.metadata_key_prefix}{transaction_id}"
                     metadata_data = self.redis_client.get(metadata_key)
 
                     if metadata_data:
                         metadata = json.loads(metadata_data)
                         results.append({
-                            "customer_id": customer_id,
+                            "transaction_id": transaction_id,
                             "similarity_score": similarity,
                             "metadata": metadata
                         })
+            logger.info(f"Processing time for searching vectors: {time.perf_counter() - t1} seconds")
 
             results.sort(key=lambda x: x["similarity_score"], reverse=True)
             return results[:limit]
@@ -89,19 +93,22 @@ class RedisVectorService:
         except Exception as e:
             raise VectorServiceError(f"Failed to search vectors: {str(e)}")
 
-    def delete_customer(self, customer_id: str) -> bool:
+    def delete_customer(self, transaction_id: str) -> bool:
         """Delete customer vector and metadata"""
         try:
-            vector_key = f"{self.vector_key_prefix}{customer_id}"
-            metadata_key = f"{self.metadata_key_prefix}{customer_id}"
+            t1 = time.perf_counter()
+            vector_key = f"{self.vector_key_prefix}{transaction_id}"
+            metadata_key = f"{self.metadata_key_prefix}{transaction_id}"
 
             if not self.redis_client.exists(vector_key):
-                raise CustomerNotFoundError(customer_id)
+                raise CustomerNotFoundError(transaction_id)
 
+            
             pipe = self.redis_client.pipeline()
             pipe.delete(vector_key)
             pipe.delete(metadata_key)
             result = pipe.execute()
+            logger.info(f"Processing time for deleting customer: {time.perf_counter() - t1} seconds")
 
             return all(result)
 
@@ -110,10 +117,10 @@ class RedisVectorService:
         except Exception as e:
             raise VectorServiceError(f"Failed to delete customer: {str(e)}")
 
-    def customer_exists(self, customer_id: str) -> bool:
+    def customer_exists(self, transaction_id: str) -> bool:
         """Check if customer exists in the database"""
         try:
-            vector_key = f"{self.vector_key_prefix}{customer_id}"
+            vector_key = f"{self.vector_key_prefix}{transaction_id}"
             return bool(self.redis_client.exists(vector_key))
         except Exception as e:
             raise VectorServiceError(f"Failed to check customer existence: {str(e)}")

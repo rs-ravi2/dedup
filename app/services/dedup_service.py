@@ -12,14 +12,14 @@ class DeduplicationService:
         self.embedding_service = embedding_service
         self.redis_service = redis_service
 
-    def store_customer(self, customer_id: str, image_data: bytes, metadata: CustomerMetadata) -> bool:
+    def store_customer(self, transaction_id: str, image_data: bytes, metadata: CustomerMetadata) -> bool:
         """Store customer record with image embedding"""
         try:
-            if self.redis_service.customer_exists(customer_id):
-                raise DedupException(f"Customer {customer_id} already exists", "CUSTOMER_EXISTS")
+            if self.redis_service.customer_exists(transaction_id):
+                raise DedupException(f"Customer {transaction_id} already exists", "CUSTOMER_EXISTS")
 
             embedding = self.embedding_service.generate_embedding(image_data)
-            self.redis_service.store_vector(customer_id, embedding, metadata)
+            self.redis_service.store_vector(transaction_id, embedding, metadata)
             return True
 
         except DedupException:
@@ -36,7 +36,7 @@ class DeduplicationService:
             search_results = []
             for result in results:
                 search_result = SearchResult(
-                    customer_id=result["customer_id"],
+                    transaction_id=result["transaction_id"],
                     similarity_score=result["similarity_score"],
                     metadata=CustomerMetadata(**result["metadata"])
                 )
@@ -47,10 +47,10 @@ class DeduplicationService:
         except Exception as e:
             raise DedupException(f"Failed to search customers: {str(e)}")
 
-    def purge_customer(self, customer_id: str) -> bool:
+    def purge_customer(self, transaction_id: str) -> bool:
         """Delete customer record"""
         try:
-            return self.redis_service.delete_customer(customer_id)
+            return self.redis_service.delete_customer(transaction_id)
         except CustomerNotFoundError:
             raise
         except Exception as e:

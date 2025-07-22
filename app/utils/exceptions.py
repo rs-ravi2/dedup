@@ -21,8 +21,8 @@ class AuthenticationError(DedupException):
 class CustomerNotFoundError(DedupException):
     """Customer not found errors"""
 
-    def __init__(self, customer_id: str):
-        super().__init__(f"Customer {customer_id} not found", "CUSTOMER_NOT_FOUND")
+    def __init__(self, transaction_id: str):
+        super().__init__(f"Customer {transaction_id} not found", "CUSTOMER_NOT_FOUND")
 
 
 class InvalidRequestError(DedupException):

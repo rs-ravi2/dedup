@@ -13,7 +13,7 @@ import numpy as np
 # Configuration
 BASE_URL = "http://localhost:8000"
 API_TOKEN = "COcEJgOmhw0bwjhZdHwxDxWee7ZGGBRj"
-HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
+HEADERS = {"Authorization": f"{API_TOKEN}"}
 
 
 def create_test_image():
@@ -176,47 +176,3 @@ def run_all_tests():
 
 if __name__ == "__main__":
     run_all_tests()
-    f"{BASE_URL}/v1/dedup/face/store",
-    files = files,
-    headers = HEADERS
-)
-
-print(f"Status Code: {response.status_code}")
-print(f"Response: {response.json()}")
-
-# Validate response structure
-if response.status_code == 200:
-    data = response.json()
-assert data["status"] == "success"
-assert data["transaction_id"] == "test_cust_001"
-assert "message" in data
-print("✅ Store API test passed")
-else:
-print("❌ Store API test failed")
-
-return response.status_code == 200
-
-
-def test_search_api():
-    """Test the /search endpoint according to contract"""
-    print("\n=== Testing Search API ===")
-
-    # Prepare search metadata according to contract
-    search_metadata = {
-        "transaction_id": "test_cust_001",
-        "id_type": "national_id",
-        "id_number": "ID123456789",
-        "created_on": "2024-01-15T10:30:00Z"
-    }
-
-    image_data = create_test_image()
-
-    # Prepare multipart form data
-    files = {
-        'image': ('query.jpg', image_data, 'image/jpeg'),
-        'metadata': (None, json.dumps(search_metadata)),
-        'threshold': (None, '0.6'),
-        'limit': (None, '10')
-    }
-
-    response = requests.post(

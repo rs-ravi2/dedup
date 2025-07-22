@@ -48,14 +48,14 @@ async def store_record(
         image_data = await image.read()
 
         dedup_service.store_customer(
-            customer_metadata.customer_id,
+            customer_metadata.transaction_id,
             image_data,
             customer_metadata
         )
 
         return StoreResponse(
             status="success",
-            customer_id=customer_metadata.customer_id,
+            transaction_id=customer_metadata.transaction_id,
             message="Record inserted successfully"
         )
 
@@ -157,11 +157,11 @@ async def purge_record(
 ):
     """Delete a customer record from the system"""
     try:
-        dedup_service.purge_customer(request.customer_id)
+        dedup_service.purge_customer(request.transaction_id)
 
         return PurgeResponse(
             status="success",
-            customer_id=request.customer_id,
+            transaction_id=request.transaction_id,
             message="Record purged successfully"
         )
 
