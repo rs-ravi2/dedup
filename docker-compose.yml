@@ -2,26 +2,36 @@ version: '3.8'
 
 services:
   redis:
-    image: redis/redis-stack:latest
+    image: redis:7-alpine
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-    environment:
-      - REDIS_ARGS="--maxmemory 2gb --maxmemory-policy allkeys-lru"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   api:
     build: .
     ports:
       - "8000:8000"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     environment:
       - REDIS_URL=redis://redis:6379
+      - API_KEY=test-api-key-123
     volumes:
-      - ./app:/app/app
+      - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   redis_data:
