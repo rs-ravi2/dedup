@@ -1,122 +1,106 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-redis==5.0.1
-redis-om==0.2.1
-pydantic==1.10.12
-pydantic-settings==2.10.1
-pydantic_core==2.33.2
-python-multipart==0.0.6
-python-jose[cryptography]==3.3.0
-python-dotenv==1.0.0
-pillow==10.1.0
-numpy==1.24.3
-typing-extensions==4.8.0
+# FastAPI and related web framework
+fastapi
+uvicorn
 
-# Data processing and analysis
-pandas==2.0.3
-scipy==1.11.3
+# Redis and object mapping
+redis
+redis-om
 
-# Machine learning and embeddings (choose one)
-# For InsightFace (face recognition)
-insightface==0.7.3
-ipykernel @ file:///Users/runner/miniforge3/conda-bld/ipykernel_1719845458456/work
-ipython @ file:///home/conda/feedstock_root/build_artifacts/ipython_1701831663892/work
-isort==5.12.0
-jedi @ file:///home/conda/feedstock_root/build_artifacts/jedi_1733300866624/work
-joblib==1.5.1
-jupyter_client @ file:///home/conda/feedstock_root/build_artifacts/jupyter_client_1733440914442/work
-jupyter_core @ file:///home/conda/feedstock_root/build_artifacts/jupyter_core_1748333051527/work
-kiwisolver==1.4.7
-lazy_loader @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_e4fhv6eyhq/croot/lazy_loader_1718176742928/work
-matplotlib==3.9.2
-matplotlib-inline @ file:///home/conda/feedstock_root/build_artifacts/matplotlib-inline_1733416936468/work
-mccabe @ file:///opt/conda/conda-bld/mccabe_1644221741721/work
-more-itertools==9.1.0
-mpmath==1.3.0
-mypy_extensions==1.1.0
-nest_asyncio @ file:///home/conda/feedstock_root/build_artifacts/nest-asyncio_1733325553580/work
-networkx==3.2.1
-numexpr @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_b3kvvt6tc6/croot/numexpr_1730215947700/work
-numpy @ file:///Users/runner/miniforge3/conda-bld/numpy_1682210374067/work
-onnx==1.18.0
-onnxruntime==1.16.0
-opencv-python==4.8.1.78
-packaging==25.0
-pandas @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_b9nb2vqtpu/croot/pandas_1692289331806/work
-parso @ file:///home/conda/feedstock_root/build_artifacts/parso_1733271261340/work
-pathspec==0.12.1
-pexpect @ file:///home/conda/feedstock_root/build_artifacts/pexpect_1733301927746/work
-pickleshare @ file:///home/conda/feedstock_root/build_artifacts/pickleshare_1733327343728/work
-Pillow==10.1.0
-platformdirs==4.3.8
-pluggy==1.6.0
-prettytable==3.16.0
-prompt_toolkit @ file:///home/conda/feedstock_root/build_artifacts/prompt-toolkit_1744724089886/work
-protobuf==6.31.1
-psutil @ file:///Users/runner/miniforge3/conda-bld/psutil_1740663174295/work
-ptyprocess @ file:///home/conda/feedstock_root/build_artifacts/ptyprocess_1733302279685/work/dist/ptyprocess-0.7.0-py2.py3-none-any.whl#sha256=92c32ff62b5fd8cf325bec5ab90d7be3d2a8ca8c8a3813ff487a8d2002630d1f
-pure_eval @ file:///home/conda/feedstock_root/build_artifacts/pure_eval_1733569405015/work
-pyasn1 @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_e7xd4dpfe0/croot/pyasn1_1729239794632/work
-pycodestyle @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_04k6_hknix/croot/pycodestyle_1701821053858/work
-pycparser==2.22
-pycryptodome @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_e330uapc13/croot/pycryptodome_1737039931766/work
-pydantic==2.11.7
-pydantic-settings==2.10.1
-pydantic_core==2.33.2
-pyflakes @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_5a_s3xfl1o/croot/pyflakes_1701821055290/work
-Pygments @ file:///home/conda/feedstock_root/build_artifacts/pygments_1750615794071/work
-pyparsing==3.2.3
-pytest==7.4.3
-pytest-asyncio==0.21.1
-httpx==0.25.2
+# Pydantic and configuration
+pydantic
+pydantic-settings
+pydantic-core
 
-# Development tools
-isort==5.12.0
-flake8==6.1.0
+# Web utilities
+python-multipart
+python-dotenv
+python-jose[cryptography]
 
-fastapi==0.104.1
-uvicorn==0.24.0
-redis==5.0.1
-python-multipart==0.0.6
-python-jose[cryptography]==3.3.0
-python-dotenv==1.0.0
-python-jose @ file:///tmp/build/80754af9/python-jose_1623673016654/work
-python-multipart @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_f6gxd78sqy/croot/python-multipart_1692946342848/work
-python-ulid==1.1.0
-pytz @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_3bjczh6it0/croot/pytz_1752135865541/work
-PyWavelets==1.6.0
-PyYAML==6.0.2
-pyzmq @ file:///Users/runner/miniforge3/conda-bld/pyzmq_1728642327912/work
-qudida @ file:///home/conda/feedstock_root/build_artifacts/qudida_1651101164121/work
-redis==5.0.1
-redis-om==0.3.5
-requests==2.32.4
-rsa @ file:///tmp/build/80754af9/rsa_1614366226499/work
-scikit-image @ file:///Users/runner/miniforge3/conda-bld/scikit-image_1729813889383/work/dist/scikit_image-0.24.0-cp39-cp39-macosx_11_0_arm64.whl#sha256=0b540f9a860fe9c7cc89611c6ae7fb018d0d7955919664127f5943a7191f31ad
-scikit-learn==1.6.1
-scipy @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_1b7r8zpma8/croot/scipy_1696543295098/work/dist/scipy-1.11.3-cp39-cp39-macosx_11_0_arm64.whl#sha256=d304d457b3dadc76b60f05474a9f8ca44d70a5f3b6ae70d234f157a66cd88783
-simsimd==6.5.0
-six @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_03myqm7p6o/croot/six_1744271511946/work
-sniffio==1.3.1
-stack_data @ file:///home/conda/feedstock_root/build_artifacts/stack_data_1733569443808/work
-starlette==0.47.2
-stringzilla==3.12.5
-structlog==23.1.0
-sympy==1.14.0
-threadpoolctl==3.6.0
-tifffile==2024.8.30
-tomli==2.2.1
-tornado @ file:///Users/runner/miniforge3/conda-bld/tornado_1748003404111/work
-tqdm==4.67.1
-traitlets @ file:///home/conda/feedstock_root/build_artifacts/traitlets_1733367359838/work
-types-cffi==1.17.0.20250523
-types-pyOpenSSL==24.1.0.20240722
-types-redis==4.6.0.20241004
-types-setuptools==80.9.0.20250529
-typing-inspection==0.4.1
-typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_typing_extensions_1751643513/work
-tzdata @ file:///croot/python-tzdata_1746123641790/work
-urllib3==2.5.0
-uvicorn==0.24.0
-wcwidth==0.2.13
-zipp==3.23.0
+# Image processing and scientific computing
+pillow
+numpy
+opencv-python
+scipy
+matplotlib
+scikit-image
+PyWavelets
+tifffile
+
+# Data analysis
+pandas
+
+# Machine learning and vector similarity
+scikit-learn
+onnx
+onnxruntime
+simsimd
+threadpoolctl
+joblib
+
+# Face recognition
+insightface
+
+# Utilities and typing
+typing-extensions
+typing-inspection
+python-ulid
+httpx
+requests
+six
+more-itertools
+platformdirs
+pure-eval
+lazy-loader
+nest-asyncio
+psutil
+pyyaml
+structlog
+sympy
+zipp
+tzdata
+pytz
+
+# Jupyter and IPython (for notebooks or dev)
+ipykernel
+ipython
+jupyter_client
+jupyter_core
+matplotlib-inline
+parso
+jedi
+pexpect
+pickleshare
+prompt_toolkit
+ptyprocess
+pyzmq
+stack_data
+traitlets
+wcwidth
+
+# Linting and testing
+flake8
+isort
+mccabe
+pycodestyle
+pyflakes
+pytest
+pytest-asyncio
+
+# Type stubs
+types-cffi
+types-pyOpenSSL
+types-redis
+types-setuptools
+
+# Optional & misc
+packaging
+pathspec
+protobuf
+rsa
+qudida
+stringzilla
+sniffio
+tomli
+tornado
+urllib3
+tqdm

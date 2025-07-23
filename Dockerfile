@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM 172.23.12.160:8083/python:3.9-slim
 
 WORKDIR /app
 
