@@ -30,6 +30,14 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("⚠ Redis connection failed")
 
+        # Download models if needed
+        logger.info("Checking for models...")
+        try:
+            await embedding_service.download_models_if_needed()
+            await embedding_service.initialize_if_models_available()
+        except Exception as e:
+            logger.warning(f"Model setup failed: {str(e)}")
+
         # Check embedding service status
         model_status = embedding_service.get_model_status()
         logger.info(f"Embedding service status: {model_status}")
@@ -128,28 +136,6 @@ async def health():
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return {"status": "unhealthy", "service": "dedup-api", "error": str(e)}
-
-
-@app.get("/status")
-async def detailed_status():
-    """Detailed status endpoint for debugging"""
-    try:
-        redis_healthy = await redis_service.health_check()
-        model_status = embedding_service.get_model_status()
-
-        return {
-            "redis": {"healthy": redis_healthy, "url": settings.redis_url},
-            "embedding": model_status,
-            "config": {
-                "vector_dimension": settings.vector_dimension,
-                "default_threshold": settings.default_similarity_threshold,
-                "max_file_size": settings.max_file_size,
-                "allowed_image_types": settings.allowed_image_types,
-            },
-        }
-    except Exception as e:
-        logger.error(f"Status check failed: {str(e)}")
-        return {"error": str(e)}
 
 
 if __name__ == "__main__":

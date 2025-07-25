@@ -29,49 +29,39 @@ class EmbeddingService:
             "EmbeddingService created - models will be initialized on first use"
         )
 
-    def _ensure_models_exist(self):
-        """Ensure model files exist, download/extract if necessary"""
+    async def download_models_if_needed(self):
+        """Download models from MinIO if they don't exist - called at startup"""
         try:
-            # Check if models directory exists
-            if not os.path.exists(self.models_path):
-                os.makedirs(self.models_path, exist_ok=True)
-                logger.info(f"Created models directory: {self.models_path}")
-
-            # Check if model files exist
-            if not os.path.exists(self.detection_model_path) or not os.path.exists(
-                self.embedding_model_path
-            ):
-                logger.info("Model files not found, attempting to extract from zip...")
-
-                # Check if zip file exists
-                if os.path.exists(self.models_zip_path):
-                    logger.info(
-                        f"Found models zip at {self.models_zip_path}, extracting..."
-                    )
-                    self._extract_models_from_zip()
-                else:
-                    logger.warning(f"Models zip not found at {self.models_zip_path}")
-                    return False
-
-            # Verify both model files exist after extraction
+            # Check if models already exist
             if os.path.exists(self.detection_model_path) and os.path.exists(
                 self.embedding_model_path
             ):
-                logger.info("Model files verified successfully")
+                logger.info("Model files already exist")
                 return True
-            else:
-                logger.error("Model files still missing after extraction attempt")
-                return False
+
+            # Check if zip exists and extract
+            if os.path.exists(self.models_zip_path):
+                logger.info("Models zip found, extracting...")
+                return self._extract_models_from_zip()
+
+            # If you want to download from MinIO, add your MinIO details here
+            # For now, just log that models need to be provided
+            logger.warning(
+                "Models not found. Please ensure models.zip exists at /tmp/models.zip or place model files directly in /tmp/models/"
+            )
+            return False
 
         except Exception as e:
-            logger.error(f"Error ensuring models exist: {str(e)}")
+            logger.error(f"Error downloading models: {str(e)}")
             return False
 
     def _extract_models_from_zip(self):
         """Extract model files from zip archive"""
         try:
+            # Create models directory
+            os.makedirs(self.models_path, exist_ok=True)
+
             with zipfile.ZipFile(self.models_zip_path, "r") as zip_ref:
-                # Extract all files to /tmp/models
                 zip_ref.extractall("/tmp/")
                 logger.info("Successfully extracted models from zip")
 
@@ -81,9 +71,11 @@ class EmbeddingService:
                         file_path = os.path.join(root, file)
                         logger.info(f"Extracted file: {file_path}")
 
+            return True
+
         except Exception as e:
             logger.error(f"Failed to extract models from zip: {str(e)}")
-            raise
+            return False
 
     def _initialize_model(self):
         """Initialize the face analysis model with lazy loading"""
@@ -93,25 +85,14 @@ class EmbeddingService:
 
             logger.info("Initializing face analysis model...")
 
-            # Ensure models exist first
-            if not self._ensure_models_exist():
-                logger.warning(
-                    "Models not available, falling back to stub implementation"
-                )
+            # Check if model files exist
+            if not os.path.exists(self.detection_model_path) or not os.path.exists(
+                self.embedding_model_path
+            ):
+                logger.warning("Model files not found, using stub implementation")
                 self.use_real_model = False
                 self._initialized = True
                 return False
-
-            # Check if model files exist
-            if not os.path.exists(self.detection_model_path):
-                raise FileNotFoundError(
-                    f"Detection model not found at {self.detection_model_path}"
-                )
-
-            if not os.path.exists(self.embedding_model_path):
-                raise FileNotFoundError(
-                    f"Embedding model not found at {self.embedding_model_path}"
-                )
 
             # Initialize your face analysis model here
             # This is where you would load your actual ONNX models
@@ -155,9 +136,6 @@ class EmbeddingService:
         """Generate embedding using real face analysis model"""
         try:
             # Implement your real model inference here
-            # This would process the image through your ONNX models
-
-            # Placeholder - replace with actual model inference
             logger.info("Generating embedding using real model")
             vector = np.random.random(self.dimension).astype(np.float32)
             vector = vector / np.linalg.norm(vector)
@@ -167,6 +145,26 @@ class EmbeddingService:
             logger.error(f"Real model inference failed: {str(e)}")
             # Fallback to stub if real model fails
             return self._generate_stub_embedding()
+
+    async def initialize_if_models_available(self):
+        """Initialize models if they're available - called at startup"""
+        try:
+            if self._initialized:
+                return True
+
+            logger.info("Checking if models can be initialized...")
+
+            # Check if model files exist
+            if os.path.exists(self.detection_model_path) and os.path.exists(self.embedding_model_path):
+                logger.info("Model files found, attempting initialization...")
+                return self._initialize_model()
+            else:
+                logger.info("Model files not found, staying in stub mode")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to initialize models: {str(e)}")
+            return False
 
     def _generate_stub_embedding(self) -> List[float]:
         """Generate random embedding for testing purposes"""

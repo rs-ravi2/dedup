@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # redis_db: int = 0
 
     # Redis Configuration
-    redis_url: str = "redis://localhost:6379"
+    redis_url: str = "redis://localhost:6379/0"
     redis_password: Optional[str] = None
     redis_db: int = 0
 
