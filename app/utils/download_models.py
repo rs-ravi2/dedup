@@ -29,10 +29,6 @@ class MinioConnector:
                                 self.MINIO_USERNAME,
                                 self.MINIO_PASSWORD,
                                 secure=self.SECURE)
-            # Immediately test the connection by listing buckets
-            # buckets = list(self.client.list_buckets())
-            # bucket_names = [bucket.name for bucket in buckets]
-            # logger.info(f"Connected to MinIO. Available buckets: {bucket_names}")
         except Exception as e:
             logger.error(f"Failed to establish connection with MinIO: {str(e)}")
             raise
@@ -95,11 +91,6 @@ def download_model_if_not_exists(paths):
 
 def download_all_models_from_config():
     minio_config = MinioConfig()
-    logger.info("Starting model download process")
-    logger.info(f"MinIO URL: {minio_config.minio_url}")
-    logger.info(f"MinIO Bucket: {minio_config.minio_bucket_name}")
-    logger.info(f"Download Path: {minio_config.download_path}")
-    logger.info(f"Model Object Path: {minio_config.model_object_path}")
 
     paths = {
         'deduplication': {
@@ -110,8 +101,7 @@ def download_all_models_from_config():
     }
     download_model_if_not_exists(paths)
 
-## Helper Fuctions: 
-
+## Helper Functions:
 def test_minio_connection():
     try:
         connector = MinioConnector()
