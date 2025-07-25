@@ -1,38 +1,66 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.config import settings
 from app.routers import dedup
 from app.utils.exceptions import DedupException
+from app.services.embedding import embedding_service
+from app.services.redis_service import redis_service
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
-from app.utils.download_models import download_all_models_from_config
 
-# Create FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle events"""
+    # Startup
+    logger.info("Starting up Deduplication API...")
+
+    try:
+        # Test Redis connection
+        redis_healthy = await redis_service.health_check()
+        if redis_healthy:
+            logger.info("✓ Redis connection successful")
+        else:
+            logger.warning("⚠ Redis connection failed")
+
+        # Check embedding service status
+        model_status = embedding_service.get_model_status()
+        logger.info(f"Embedding service status: {model_status}")
+
+        logger.info("✓ Application startup completed successfully")
+
+    except Exception as e:
+        logger.error(f"✗ Startup failed: {str(e)}")
+        # Don't raise exception - let app start with degraded functionality
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down Deduplication API...")
+    logger.info("✓ Application shutdown completed")
+
+
+# Create FastAPI app with lifespan events
 app = FastAPI(
     title=settings.api_title,
     version=settings.api_version,
     description=settings.api_description,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    try:
-        download_all_models_from_config()
-    except Exception as e:
-        logger.error(f"Model download failed at startup: {str(e)}")
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],  # Configure appropriately for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,20 +79,14 @@ async def dedup_exception_handler(request: Request, exc: DedupException):
         "INVALID_REQUEST": 400,
         "CUSTOMER_EXISTS": 409,
         "VECTOR_SERVICE_ERROR": 500,
-        "INTERNAL_ERROR": 500
+        "INTERNAL_ERROR": 500,
     }
 
     status_code = status_code_map.get(exc.code, 500)
 
     return JSONResponse(
         status_code=status_code,
-        content={
-            "error": {
-                "code": exc.code,
-                "message": exc.message,
-                "details": None
-            }
-        }
+        content={"error": {"code": exc.code, "message": exc.message, "details": None}},
     )
 
 
@@ -76,14 +98,58 @@ async def root():
         "version": settings.api_version,
         "description": settings.api_description,
         "docs": "/docs",
-        "redoc": "/redoc"
+        "redoc": "/redoc",
     }
 
 
 @app.get("/health")
 async def health():
     """Basic health check endpoint"""
-    return {"status": "healthy", "service": "dedup-api"}
+    try:
+        # Check Redis health
+        redis_healthy = await redis_service.health_check()
+
+        # Check embedding service status
+        model_status = embedding_service.get_model_status()
+
+        overall_health = redis_healthy and model_status.get("initialized", False)
+
+        return {
+            "status": "healthy" if overall_health else "degraded",
+            "service": "dedup-api",
+            "components": {
+                "redis": "healthy" if redis_healthy else "unhealthy",
+                "embedding": "healthy"
+                if model_status.get("initialized", False)
+                else "initializing",
+                "model_status": model_status,
+            },
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {"status": "unhealthy", "service": "dedup-api", "error": str(e)}
+
+
+@app.get("/status")
+async def detailed_status():
+    """Detailed status endpoint for debugging"""
+    try:
+        redis_healthy = await redis_service.health_check()
+        model_status = embedding_service.get_model_status()
+
+        return {
+            "redis": {"healthy": redis_healthy, "url": settings.redis_url},
+            "embedding": model_status,
+            "config": {
+                "vector_dimension": settings.vector_dimension,
+                "default_threshold": settings.default_similarity_threshold,
+                "max_file_size": settings.max_file_size,
+                "allowed_image_types": settings.allowed_image_types,
+            },
+        }
+    except Exception as e:
+        logger.error(f"Status check failed: {str(e)}")
+        return {"error": str(e)}
 
 
 if __name__ == "__main__":
