@@ -10,26 +10,32 @@ from app.config import settings
 
 router = APIRouter(prefix="/v1/dedup/face", tags=["deduplication"])
 
+
 @router.post("/store", response_model=StoreResponse)
 async def store_record(
         image: UploadFile = File(..., description="Customer image file"),
         metadata: str = Form(..., description="JSON string containing customer metadata"),
         token: str = Depends(verify_token)
 ):
-    """Store a new customer record with image and metadata"""
+    """
+    Store a new customer record with image and metadata.
+    Generates embeddings and stores them in the vector database.
+    """
     try:
-        if image.content_type not in settings.allowed_image_types:
+        # Validate image content type
+        if image.content_type not in settings.allowed_image_types_set:
             raise HTTPException(
                 status_code=400,
                 detail={
                     "error": {
                         "code": "INVALID_REQUEST",
                         "message": f"Unsupported image format: {image.content_type}",
-                        "details": f"Allowed formats: {', '.join(settings.allowed_image_types)}"
+                        "details": f"Allowed formats: {', '.join(settings.allowed_image_types_set)}"
                     }
                 }
             )
 
+        # Parse metadata
         try:
             metadata_dict = json.loads(metadata)
             customer_metadata = CustomerMetadata(**metadata_dict)
@@ -45,17 +51,19 @@ async def store_record(
                 }
             )
 
+        # Read image data
         image_data = await image.read()
 
-        dedup_service.store_customer(
-            customer_metadata.transaction_id,
+        # Store customer record
+        await dedup_service.store_customer(
+            customer_metadata.customer_id,
             image_data,
             customer_metadata
         )
 
         return StoreResponse(
             status="success",
-            transaction_id=customer_metadata.transaction_id,
+            customer_id=customer_metadata.customer_id,
             message="Record inserted successfully"
         )
 
@@ -75,27 +83,34 @@ async def store_record(
             }
         )
 
+
 @router.post("/search", response_model=SearchResponse)
 async def search_similar(
         image: UploadFile = File(..., description="Query image for similarity search"),
-        threshold: Optional[float] = Form(default=settings.default_similarity_threshold),
-        limit: Optional[int] = Form(default=10),
+        threshold: Optional[float] = Form(default=settings.default_similarity_threshold,
+                                          description="Similarity threshold (0.0-1.0)"),
+        limit: Optional[int] = Form(default=10, description="Maximum results"),
         token: str = Depends(verify_token)
 ):
-    """Search for matching customer records based on image similarity"""
+    """
+    Search for matching customer records based on image similarity.
+    Uses vector embeddings and configurable similarity thresholds.
+    """
     try:
-        if image.content_type not in settings.allowed_image_types:
+        # Validate image content type
+        if image.content_type not in settings.allowed_image_types_set:
             raise HTTPException(
                 status_code=400,
                 detail={
                     "error": {
                         "code": "INVALID_REQUEST",
                         "message": f"Unsupported image format: {image.content_type}",
-                        "details": f"Allowed formats: {', '.join(settings.allowed_image_types)}"
+                        "details": f"Allowed formats: {', '.join(settings.allowed_image_types_set)}"
                     }
                 }
             )
 
+        # Validate search parameters
         if threshold is not None and (threshold < 0.0 or threshold > 1.0):
             raise HTTPException(
                 status_code=400,
@@ -120,9 +135,11 @@ async def search_similar(
                 }
             )
 
+        # Read image data
         image_data = await image.read()
 
-        results = dedup_service.search_similar_customers(
+        # Search for similar customers
+        results = await dedup_service.search_similar_customers(
             image_data,
             threshold or settings.default_similarity_threshold,
             limit or 10
@@ -150,18 +167,23 @@ async def search_similar(
             }
         )
 
+
 @router.post("/purge", response_model=PurgeResponse)
 async def purge_record(
         request: PurgeRequest,
         token: str = Depends(verify_token)
 ):
-    """Delete a customer record from the system"""
+    """
+    Delete a customer record from the system.
+    Removes both vector embeddings and metadata.
+    """
     try:
-        dedup_service.purge_customer(request.transaction_id)
+        # Purge customer record
+        await dedup_service.purge_customer(request.customer_id)
 
         return PurgeResponse(
             status="success",
-            transaction_id=request.transaction_id,
+            customer_id=request.customer_id,
             message="Record purged successfully"
         )
 
@@ -179,11 +201,12 @@ async def purge_record(
             }
         )
 
+
 @router.get("/health")
 async def health_check():
     """Check service health status"""
     try:
-        health_status = dedup_service.health_check()
+        health_status = await dedup_service.health_check()
         status_code = 200 if health_status["overall"] else 503
 
         return {
@@ -196,105 +219,3 @@ async def health_check():
             "status": "unhealthy",
             "error": str(e)
         }
-
-# # Add this to your app/routers/dedup.py
-
-# @router.post("/batch/analyze", response_model=dict)
-# async def batch_analyze_duplicates(
-#         threshold: Optional[float] = Form(default=settings.default_similarity_threshold),
-#         limit: Optional[int] = Form(default=500),
-#         token: str = Depends(verify_token)
-# ):
-#     """
-#     Perform batch analysis of all stored records to find duplicate groups.
-#     Similar to the notebook's comprehensive grouping approach.
-#     """
-#     try:
-#         # Validate parameters
-#         if threshold < 0.0 or threshold > 1.0:
-#             raise HTTPException(
-#                 status_code=400,
-#                 detail={
-#                     "error": {
-#                         "code": "INVALID_REQUEST",
-#                         "message": "Threshold must be between 0.0 and 1.0",
-#                         "details": None
-#                     }
-#                 }
-#             )
-
-#         # Perform batch similarity analysis
-#         groups = await redis_service.batch_search_all(threshold, limit)
-        
-#         # Generate report similar to notebook
-#         report_data = await _generate_batch_report(groups)
-        
-#         return {
-#             "status": "success",
-#             "total_groups": len(groups),
-#             "analysis_results": groups,
-#             "summary": report_data
-#         }
-
-#     except DedupException as e:
-#         raise create_http_exception(e)
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=500,
-#             detail={
-#                 "error": {
-#                     "code": "INTERNAL_ERROR",
-#                     "message": "Internal server error",
-#                     "details": str(e)
-#                 }
-#             }
-#         )
-
-
-# async def _generate_batch_report(groups: Dict) -> Dict:
-#     """Generate summary report from batch analysis results"""
-#     total_groups = len(groups)
-#     total_records_in_groups = sum(len(group_data["similar_customers"]) + 1 for group_data in groups.values())
-    
-#     # Count potential fraud groups (groups with multiple unique IDs)
-#     # Note: This would require metadata analysis which isn't fully implemented here
-#     # You'd need to fetch customer metadata and check for unique ID numbers per group
-    
-#     return {
-#         "total_duplicate_groups": total_groups,
-#         "total_records_in_groups": total_records_in_groups,
-#         "average_group_size": total_records_in_groups / total_groups if total_groups > 0 else 0,
-#         "analysis_threshold": 0.6  
-#     }
-
-
-# @router.get("/batch/report")
-# async def generate_dedup_report(
-#         token: str = Depends(verify_token)
-# ):
-#     """
-#     Generate a comprehensive deduplication report similar to the notebook output.
-#     This would integrate with your existing customer metadata.
-#     """
-#     try:
-#         # This would require integration with your customer database
-#         # to fetch full metadata and generate the detailed fraud report
-#         # similar to what's done in the notebook
-        
-#         return {
-#             "status": "success",
-#             "message": "Report generation endpoint - requires customer metadata integration",
-#             "note": "This endpoint would generate the detailed fraud analysis report similar to the notebook"
-#         }
-        
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=500,
-#             detail={
-#                 "error": {
-#                     "code": "INTERNAL_ERROR", 
-#                     "message": "Failed to generate report",
-#                     "details": str(e)
-#                 }
-#             }
-#         )

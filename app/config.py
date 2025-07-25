@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
 from typing import Optional, Set
 
 class Settings(BaseSettings):
@@ -27,7 +28,21 @@ class Settings(BaseSettings):
 
     # File Upload
     max_file_size: int = 10 * 1024 * 1024  # 10MB
-    allowed_image_types: Set[str] = {"image/jpeg", "image/png", "image/jpg"}
+    allowed_image_types: str = "image/jpeg,image/png,image/jpg"  # Store as string, convert to set
+
+    @field_validator('allowed_image_types')
+    @classmethod
+    def parse_allowed_image_types(cls, v):
+        if isinstance(v, str):
+            return set(v.split(','))
+        return v
+
+    @property
+    def allowed_image_types_set(self) -> Set[str]:
+        """Get allowed image types as a set"""
+        if isinstance(self.allowed_image_types, str):
+            return set(self.allowed_image_types.split(','))
+        return self.allowed_image_types
 
     class Config:
         env_file = ".env"
