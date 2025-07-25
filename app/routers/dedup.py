@@ -196,3 +196,105 @@ async def health_check():
             "status": "unhealthy",
             "error": str(e)
         }
+
+# # Add this to your app/routers/dedup.py
+
+# @router.post("/batch/analyze", response_model=dict)
+# async def batch_analyze_duplicates(
+#         threshold: Optional[float] = Form(default=settings.default_similarity_threshold),
+#         limit: Optional[int] = Form(default=500),
+#         token: str = Depends(verify_token)
+# ):
+#     """
+#     Perform batch analysis of all stored records to find duplicate groups.
+#     Similar to the notebook's comprehensive grouping approach.
+#     """
+#     try:
+#         # Validate parameters
+#         if threshold < 0.0 or threshold > 1.0:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail={
+#                     "error": {
+#                         "code": "INVALID_REQUEST",
+#                         "message": "Threshold must be between 0.0 and 1.0",
+#                         "details": None
+#                     }
+#                 }
+#             )
+
+#         # Perform batch similarity analysis
+#         groups = await redis_service.batch_search_all(threshold, limit)
+        
+#         # Generate report similar to notebook
+#         report_data = await _generate_batch_report(groups)
+        
+#         return {
+#             "status": "success",
+#             "total_groups": len(groups),
+#             "analysis_results": groups,
+#             "summary": report_data
+#         }
+
+#     except DedupException as e:
+#         raise create_http_exception(e)
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=500,
+#             detail={
+#                 "error": {
+#                     "code": "INTERNAL_ERROR",
+#                     "message": "Internal server error",
+#                     "details": str(e)
+#                 }
+#             }
+#         )
+
+
+# async def _generate_batch_report(groups: Dict) -> Dict:
+#     """Generate summary report from batch analysis results"""
+#     total_groups = len(groups)
+#     total_records_in_groups = sum(len(group_data["similar_customers"]) + 1 for group_data in groups.values())
+    
+#     # Count potential fraud groups (groups with multiple unique IDs)
+#     # Note: This would require metadata analysis which isn't fully implemented here
+#     # You'd need to fetch customer metadata and check for unique ID numbers per group
+    
+#     return {
+#         "total_duplicate_groups": total_groups,
+#         "total_records_in_groups": total_records_in_groups,
+#         "average_group_size": total_records_in_groups / total_groups if total_groups > 0 else 0,
+#         "analysis_threshold": 0.6  
+#     }
+
+
+# @router.get("/batch/report")
+# async def generate_dedup_report(
+#         token: str = Depends(verify_token)
+# ):
+#     """
+#     Generate a comprehensive deduplication report similar to the notebook output.
+#     This would integrate with your existing customer metadata.
+#     """
+#     try:
+#         # This would require integration with your customer database
+#         # to fetch full metadata and generate the detailed fraud report
+#         # similar to what's done in the notebook
+        
+#         return {
+#             "status": "success",
+#             "message": "Report generation endpoint - requires customer metadata integration",
+#             "note": "This endpoint would generate the detailed fraud analysis report similar to the notebook"
+#         }
+        
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=500,
+#             detail={
+#                 "error": {
+#                     "code": "INTERNAL_ERROR", 
+#                     "message": "Failed to generate report",
+#                     "details": str(e)
+#                 }
+#             }
+#         )

@@ -10,6 +10,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from app.utils.download_models import download_all_models_from_config
+
 # Create FastAPI app
 app = FastAPI(
     title=settings.api_title,
@@ -18,6 +20,14 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Startup event
+@app.on_event("startup")
+async def startup_event():
+    try:
+        download_all_models_from_config()
+    except Exception as e:
+        logger.error(f"Model download failed at startup: {str(e)}")
 
 # Add CORS middleware
 app.add_middleware(

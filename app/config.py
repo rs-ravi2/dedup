@@ -1,34 +1,25 @@
 from pydantic_settings import BaseSettings
 from typing import Optional, Set
-
+ 
 class Settings(BaseSettings):
-    use_local_redis: bool = False
-
-    # Local Redis (e.g., Docker-based)
-    local_redis_host: str = "localhost"
-    local_redis_port: int = 6379
-    local_redis_db: int = 0
-    local_redis_password: Optional[str] = None
-
-    # Cloud Redis
-    cloud_redis_host: str = "10.190.192.51"
-    cloud_redis_port: int = 6379
-    cloud_redis_db: int = 0
-    cloud_redis_password: str = "Airtel#321"
-
-    # Vector Configuration
-    vector_dimension: int = 512
-    default_similarity_threshold: float = 0.6
-    max_search_results: int = 100
-
-    # API Metadata
+    # API Configuration
     api_title: str = "Customer Deduplication API"
     api_version: str = "v1"
     api_description: str = "API for customer deduplication using image similarity"
-
+ 
+    # Redis Configuration
+    redis_url: str = "redis://10.190.192.51:6379"
+    redis_password: Optional[str] = "Airtel#321"
+    redis_db: int = 0
+ 
+    # Vector Configuration
+    vector_dimension: int = 512
+    default_similarity_threshold: float = 0.8
+    max_search_results: int = 100
+ 
     # Authentication
     api_key: str = "COcEJgOmhw0bwjhZdHwxDxWee7ZGGBRj"
-
+ 
     # File Upload
     max_file_size: int = 10 * 1024 * 1024  # 10MB
     allowed_image_types: Set[str] = {"image/jpeg", "image/png", "image/jpg"}
@@ -36,5 +27,14 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
 
+class MinioConfig:
+    # MinIO connection details
+    minio_url:str =  '172.24.4.37:9000'
+    minio_username: str = 'datascience'
+    minio_password: str =  'datascience'
+    minio_bucket_name:str = 'ng-auto-cm-models'
+    secure: bool = False  
+    model_object_path: str = "deduplication/models.zip"
+    download_path: str = "/tmp"
 
 settings = Settings()
