@@ -19,17 +19,17 @@ def get_max_area_dict(predictions):
     """Get the face detection with maximum area from multiple detections."""
     if not predictions:
         return []
-    
+
     max_area = 0
     max_prediction = None
-    
+
     for pred in predictions:
         bbox = pred.bbox
         area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
         if area > max_area:
             max_area = area
             max_prediction = pred
-    
+
     return [max_prediction] if max_prediction else []
 
 
@@ -44,22 +44,34 @@ class EmbeddingService:
     def _initialize_model(self):
         """Initialize the face analysis model"""
         try:
-            detection_model = "/tmp/models/detection.onnx"
-            embedding_model = "/tmp/models/embedding.onnx"
-            
-            if not os.path.exists(detection_model):
-                logger.error(f"Detection Model Does not exist at path: {str(detection_model)}")
-            if not os.path.exists(embedding_model):
-                logger.error(f"embedding Model Does not exist at path: {str(embedding_model)}")
-            
+            detection_model_path = "/tmp/models/detection.onnx"
+            embedding_model_path = "/tmp/models/embedding.onnx"
+
+            # Check if model files exist
+            if not os.path.exists(detection_model_path):
+                logger.error(
+                    f"Detection Model Does not exist at path: {str(detection_model_path)}"
+                )
+                raise FileNotFoundError(
+                    f"Detection model not found at {detection_model_path}"
+                )
+
+            if not os.path.exists(embedding_model_path):
+                logger.error(
+                    f"embedding Model Does not exist at path: {str(embedding_model_path)}"
+                )
+                raise FileNotFoundError(
+                    f"Embedding model not found at {embedding_model_path}"
+                )
+
             # Initialize Face Analysis Model
             self.model = FaceAnalysis(
-                allowed_modules=['detection', 'recognition'], 
-                providers=['CPUExecutionProvider']
+                allowed_modules=["detection", "recognition"],
+                providers=["CPUExecutionProvider"],
             )
             self.model.prepare(ctx_id=0)
             logger.info("Face analysis model initialized successfully")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize face analysis model: {str(e)}")
             raise VectorServiceError(f"Model initialization failed: {str(e)}")
@@ -68,35 +80,37 @@ class EmbeddingService:
         """Generate embedding from image data using face analysis"""
         try:
             t1 = time.perf_counter()
-            
+
             # Validate image
             self._validate_image(image_data)
-            
+
             # Convert bytes to OpenCV image
             nparr = np.frombuffer(image_data, np.uint8)
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            
+
             if image is None:
                 raise VectorServiceError("Failed to decode image")
-            
+
             # Get face predictions
             predictions = self.model.get(image)
-            
+
             if len(predictions) == 0:
                 raise VectorServiceError("No face detected in image")
-            
+
             # If multiple faces detected, get the one with maximum area
             if len(predictions) > 1:
                 predictions = get_max_area_dict(predictions)
-            
+
             # Extract embedding
             embedding = predictions[0].embedding
-            
+
             # Ensure embedding is normalized and convert to list
             embedding = embedding / np.linalg.norm(embedding)
-            
-            logger.info(f"Embedding generation completed in {time.perf_counter() - t1:.4f} seconds")
-            
+
+            logger.info(
+                f"Embedding generation completed in {time.perf_counter() - t1:.4f} seconds"
+            )
+
             return embedding.tolist()
 
         except VectorServiceError:
@@ -111,19 +125,21 @@ class EmbeddingService:
             # Check file size
             if len(image_data) > settings.max_file_size:
                 raise VectorServiceError("Image file too large")
-            
+
             # Basic validation - try to decode with OpenCV
             nparr = np.frombuffer(image_data, np.uint8)
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            
+
             if image is None:
                 raise VectorServiceError("Invalid image format or corrupted image")
-            
+
             # Check minimum dimensions
             height, width = image.shape[:2]
             if width < 50 or height < 50:
-                raise VectorServiceError("Image too small - minimum 50x50 pixels required")
-                
+                raise VectorServiceError(
+                    "Image too small - minimum 50x50 pixels required"
+                )
+
         except VectorServiceError:
             raise
         except Exception as e:
