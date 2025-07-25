@@ -1,7 +1,7 @@
 # app/models/responses.py
 from pydantic import BaseModel, Field
-from typing import List, Optional
-from app.models.requests import CustomerMetadata
+from typing import List, Optional, Dict, Any
+from app.models.requests import StoreMetadata, SearchMetadata
 
 
 class BaseResponse(BaseModel):
@@ -9,23 +9,24 @@ class BaseResponse(BaseModel):
 
 
 class StoreResponse(BaseResponse):
-    customer_id: str = Field(..., description="Unique customer identifier")
+    transaction_id: str = Field(..., description="Unique transaction identifier")
     message: str = Field(..., description="Success message")
 
 
 class SearchResult(BaseModel):
-    customer_id: str = Field(..., description="Unique customer identifier")
     similarity_score: float = Field(..., description="Similarity score")
-    metadata: CustomerMetadata = Field(..., description="Customer metadata")
+    metadata: StoreMetadata = Field(..., description="Customer metadata")
 
 
 class SearchResponse(BaseResponse):
+    transaction_id: str = Field(..., description="Unique transaction identifier")
     total_matches: int = Field(..., description="Number of matching records found")
+    metadata: SearchMetadata = Field(..., description="Query customer metadata")
     results: List[SearchResult] = Field(..., description="List of matching records")
 
 
 class PurgeResponse(BaseResponse):
-    customer_id: str = Field(..., description="ID of the purged customer record")
+    transaction_id: str = Field(..., description="ID of the purged customer record")
     message: str = Field(..., description="Success message")
 
 

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # Vector Configuration
     vector_dimension: int = 512
-    default_similarity_threshold: float = 0.8
+    default_similarity_threshold: float = 0.6
     max_search_results: int = 100
 
     # Authentication
@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # File Upload
     max_file_size: int = 10 * 1024 * 1024  # 10MB
-    allowed_image_types: str = "image/jpeg,image/png,image/jpg"  # Store as string, convert to set
+    allowed_image_types: str = "image/jpeg,image/png,image/jpg"
 
     @field_validator('allowed_image_types')
     @classmethod

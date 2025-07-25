@@ -4,11 +4,17 @@ from typing import Optional
 from datetime import datetime
 
 
-class CustomerMetadata(BaseModel):
-    msisdn: str = Field(None, description="Customer phone number")
-    created_on: Optional[str] = Field(None, description="Record creation timestamp")
+class StoreMetadata(BaseModel):
+    msisdn: str = Field(..., description="Customer phone number")
+    created_on: Optional[str] = Field(None, description="Record creation timestamp (UTC)")
     id_type: str = Field(..., description="Type of identity document")
     id_number: str = Field(..., description="Identity document number")
+
+
+class SearchMetadata(BaseModel):
+    id_type: str = Field(..., description="Type of identity document")
+    id_number: str = Field(..., description="Identity document number")
+    created_on: str = Field(..., description="Record creation timestamp (UTC)")
 
 
 class SearchRequest(BaseModel):

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from typing import Optional
 import json
-from app.models.requests import CustomerMetadata, SearchRequest, PurgeRequest
+from app.models.requests import StoreMetadata, SearchMetadata, SearchRequest, PurgeRequest
 from app.models.responses import StoreResponse, SearchResponse, PurgeResponse
 from app.services.dedup_service import dedup_service
 from app.utils.auth import verify_token
@@ -14,6 +14,7 @@ router = APIRouter(prefix="/v1/dedup/face", tags=["deduplication"])
 @router.post("/store", response_model=StoreResponse)
 async def store_record(
         image: UploadFile = File(..., description="Customer image file"),
+        transaction_id: str = Form(..., description="Unique transaction identifier"),
         metadata: str = Form(..., description="JSON string containing customer metadata"),
         token: str = Depends(verify_token)
 ):
@@ -23,14 +24,14 @@ async def store_record(
     """
     try:
         # Validate image content type
-        if image.content_type not in settings.allowed_image_types_set:
+        if image.content_type not in settings.allowed_image_types:
             raise HTTPException(
                 status_code=400,
                 detail={
                     "error": {
                         "code": "INVALID_REQUEST",
                         "message": f"Unsupported image format: {image.content_type}",
-                        "details": f"Allowed formats: {', '.join(settings.allowed_image_types_set)}"
+                        "details": f"Allowed formats: {', '.join(settings.allowed_image_types)}"
                     }
                 }
             )
@@ -38,7 +39,7 @@ async def store_record(
         # Parse metadata
         try:
             metadata_dict = json.loads(metadata)
-            customer_metadata = CustomerMetadata(**metadata_dict)
+            store_metadata = StoreMetadata(**metadata_dict)
         except (json.JSONDecodeError, ValueError) as e:
             raise HTTPException(
                 status_code=400,
@@ -56,14 +57,14 @@ async def store_record(
 
         # Store customer record
         await dedup_service.store_customer(
-            customer_metadata.customer_id,
+            transaction_id,
             image_data,
-            customer_metadata
+            store_metadata
         )
 
         return StoreResponse(
             status="success",
-            customer_id=customer_metadata.customer_id,
+            transaction_id=transaction_id,
             message="Record inserted successfully"
         )
 
@@ -87,9 +88,10 @@ async def store_record(
 @router.post("/search", response_model=SearchResponse)
 async def search_similar(
         image: UploadFile = File(..., description="Query image for similarity search"),
-        threshold: Optional[float] = Form(default=settings.default_similarity_threshold,
-                                          description="Similarity threshold (0.0-1.0)"),
-        limit: Optional[int] = Form(default=10, description="Maximum results"),
+        transaction_id: str = Form(..., description="Unique transaction identifier"),
+        metadata: str = Form(..., description="JSON string containing customer metadata"),
+        threshold: Optional[float] = Form(default=0.6, description="Similarity threshold (0.0-1.0)"),
+        limit: Optional[int] = Form(default=None, description="Maximum results"),
         token: str = Depends(verify_token)
 ):
     """
@@ -98,14 +100,30 @@ async def search_similar(
     """
     try:
         # Validate image content type
-        if image.content_type not in settings.allowed_image_types_set:
+        if image.content_type not in settings.allowed_image_types:
             raise HTTPException(
                 status_code=400,
                 detail={
                     "error": {
                         "code": "INVALID_REQUEST",
                         "message": f"Unsupported image format: {image.content_type}",
-                        "details": f"Allowed formats: {', '.join(settings.allowed_image_types_set)}"
+                        "details": f"Allowed formats: {', '.join(settings.allowed_image_types)}"
+                    }
+                }
+            )
+
+        # Parse metadata
+        try:
+            metadata_dict = json.loads(metadata)
+            search_metadata = SearchMetadata(**metadata_dict)
+        except (json.JSONDecodeError, ValueError) as e:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": {
+                        "code": "INVALID_REQUEST",
+                        "message": "Invalid metadata format",
+                        "details": str(e)
                     }
                 }
             )
@@ -123,13 +141,13 @@ async def search_similar(
                 }
             )
 
-        if limit is not None and (limit < 1 or limit > settings.max_search_results):
+        if limit is not None and limit < 1:
             raise HTTPException(
                 status_code=400,
                 detail={
                     "error": {
                         "code": "INVALID_REQUEST",
-                        "message": f"Limit must be between 1 and {settings.max_search_results}",
+                        "message": "Limit must be greater than 0",
                         "details": None
                     }
                 }
@@ -141,14 +159,24 @@ async def search_similar(
         # Search for similar customers
         results = await dedup_service.search_similar_customers(
             image_data,
-            threshold or settings.default_similarity_threshold,
-            limit or 10
+            threshold or 0.6,
+            limit
         )
+
+        # Convert results to match API specification
+        api_results = []
+        for result in results:
+            api_results.append({
+                "similarity_score": result.similarity_score,
+                "metadata": result.metadata.dict()
+            })
 
         return SearchResponse(
             status="success",
-            total_matches=len(results),
-            results=results
+            transaction_id=transaction_id,
+            total_matches=len(api_results),
+            metadata=search_metadata,
+            results=api_results
         )
 
     except DedupException as e:
@@ -179,11 +207,11 @@ async def purge_record(
     """
     try:
         # Purge customer record
-        await dedup_service.purge_customer(request.customer_id)
+        await dedup_service.purge_customer(request.transaction_id)
 
         return PurgeResponse(
             status="success",
-            customer_id=request.customer_id,
+            transaction_id=request.transaction_id,
             message="Record purged successfully"
         )
 
